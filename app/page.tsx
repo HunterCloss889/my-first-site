@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <>
@@ -26,8 +28,7 @@ export default function Home() {
             Hi, I&apos;m building my first Next.js site.
           </h1>
           <p className="hero-desc">
-            Deployed on Vercel. Edited in Cursor. This layout is fully custom —
-            no UI library, no Tailwind. Just React components and CSS.
+          <Link href="/players-client">Go to Player Lookup</Link>
           </p>
 
           <div className="hero-cta-row">
@@ -86,6 +87,27 @@ export default function Home() {
               forms — without throwing this away. This is a real foundation.
             </p>
           </article>
+        </section>
+
+        {/* HERO CARD */}
+        <section className="hero-card">
+          <div className="hero-eyebrow">Welcome</div>
+          <h1 className="hero-title">
+            Hi, I&apos;m building my first Next.js site.
+          </h1>
+          <p className="hero-desc">
+            Deployed on Vercel. Edited in Cursor. This layout is fully custom —
+            no UI library, no Tailwind. Just React components and CSS.
+          </p>
+
+          <div className="hero-cta-row">
+            <a className="btn-primary" href="#">
+              View Project
+            </a>
+            <a className="btn-ghost" href="#">
+              GitHub Repo
+            </a>
+          </div>
         </section>
       </main>
     </>
