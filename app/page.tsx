@@ -7,7 +7,7 @@ export default function Home() {
       <header className="navbar">
         <div className="wrapper nav-inner">
           <div className="brand">
-            <span>my-first-site</span>
+            <span>props-tracker</span>
             <span className="brand-badge">beta</span>
           </div>
 
@@ -21,93 +21,82 @@ export default function Home() {
 
       {/* PAGE CONTENT */}
       <main className="wrapper">
-        {/* HERO CARD */}
+        {/* HERO */}
         <section className="hero-card">
-          <div className="hero-eyebrow">Welcome</div>
-          <h1 className="hero-title">
-            Hi, I&apos;m building my first Next.js site.
-          </h1>
+          <div className="hero-eyebrow">Sports</div>
+          <h1 className="hero-title">Sports Bets Prop Tracker</h1>
           <p className="hero-desc">
-          <Link href="/players-client">Go to Player Lookup</Link>
+            Track player props across major North American leagues with a clean, fast interface.
           </p>
 
           <div className="hero-cta-row">
-            <a className="btn-primary" href="#">
-              View Project
-            </a>
-            <a className="btn-ghost" href="#">
-              GitHub Repo
-            </a>
+            <Link className="btn-primary" href="#leagues">Browse Leagues</Link>
+            <Link className="btn-ghost" href="/players-client">Quick: NFL Player Stats</Link>
           </div>
         </section>
 
-        {/* FEATURE GRID */}
-        <section className="features-section">
+        {/* LEAGUE GRID */}
+        <section id="leagues" className="features-section">
           <article className="feature-card">
             <div className="feature-title">
-              <span>Fast Iteration</span>
-              <span className="feature-pill">local dev</span>
+              <span>NFL</span>
+              <span className="feature-pill">live</span>
+            </div>
+            <p className="feature-desc" style={{ marginBottom: "0.8rem" }}>
+              Player game stats and trends to help evaluate props.
+            </p>
+            <Link className="btn-primary" href="/players-client">Open NFL</Link>
+          </article>
+
+          <article className="feature-card">
+            <div className="feature-title">
+              <span>NBA</span>
+              <span className="feature-pill">coming soon</span>
             </div>
             <p className="feature-desc">
-              Run <code>npm run dev</code> and see changes instantly on
-              localhost:3000. No reload drama, no rebuilds. You change code,
-              your browser updates.
+              Points, rebounds, assists, and advanced splits.
             </p>
           </article>
 
           <article className="feature-card">
             <div className="feature-title">
-              <span>Zero-Config Deploy</span>
-              <span className="feature-pill">vercel</span>
+              <span>MLB</span>
+              <span className="feature-pill">coming soon</span>
             </div>
             <p className="feature-desc">
-              Push to GitHub, and Vercel ships it live automatically. You don&apos;t
-              manage servers — you just write code and commit.
+              Hitting and pitching props with recent form.
             </p>
           </article>
 
           <article className="feature-card">
             <div className="feature-title">
-              <span>Real Codebase</span>
-              <span className="feature-pill">next.js app router</span>
+              <span>NHL</span>
+              <span className="feature-pill">coming soon</span>
             </div>
             <p className="feature-desc">
-              You&apos;re already using the same tech stack used by production teams:
-              Next.js routing, React components, and API routes you can add later.
+              Shots, points, and on-ice rates for prop context.
             </p>
           </article>
 
           <article className="feature-card">
             <div className="feature-title">
-              <span>Upgradeable</span>
-              <span className="feature-pill">future</span>
+              <span>CFL</span>
+              <span className="feature-pill">coming soon</span>
             </div>
             <p className="feature-desc">
-              You can layer in Tailwind, shadcn/ui, auth, databases, file uploads,
-              forms — without throwing this away. This is a real foundation.
+              Canadian football player prop stats and trends.
             </p>
           </article>
-        </section>
 
-        {/* HERO CARD */}
-        <section className="hero-card">
-          <div className="hero-eyebrow">Welcome</div>
-          <h1 className="hero-title">
-            Hi, I&apos;m building my first Next.js site.
-          </h1>
-          <p className="hero-desc">
-            Deployed on Vercel. Edited in Cursor. This layout is fully custom —
-            no UI library, no Tailwind. Just React components and CSS.
-          </p>
-
-          <div className="hero-cta-row">
-            <a className="btn-primary" href="#">
-              View Project
-            </a>
-            <a className="btn-ghost" href="#">
-              GitHub Repo
-            </a>
-          </div>
+          <article className="feature-card">
+            <div className="feature-title">
+              <span>NCAA</span>
+              <span className="feature-pill">coming soon</span>
+            </div>
+            <p className="feature-desc">
+              College player props across divisions.
+            </p>
+          </article>
         </section>
       </main>
     </>
