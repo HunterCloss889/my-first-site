@@ -26,12 +26,97 @@ export type PlayerGameRow = {
 };
 
 const dbPath = path.join(process.cwd(), "app", "nfl_player_stats.db");
+const gamesDbPath = path.join(process.cwd(), "app", "games.db");
 
 export async function openDb() {
   return open({
     filename: dbPath,
     driver: sqlite3.Database,
   });
+}
+
+export type GameRow = {
+  game_id: string;
+  season: number;
+  game_type: string | null;
+  week: number;
+  gameday: string | null; // e.g. 2025-11-09
+  weekday: string | null;
+  gametime: string | null; // e.g. 13:00:00
+  away_team: string;
+  away_score: number | null;
+  home_team: string;
+  home_score: number | null;
+  location: string | null;
+  result: string | null;
+  total: number | null;
+  overtime: number | null;
+  old_game_id: string | null;
+  gsis: string | null;
+  nfl_detail_id: string | null;
+  pfr: string | null;
+  pff: string | null;
+  espn: string | null;
+  ftn: string | null;
+  away_rest: number | null;
+  home_rest: number | null;
+  div_game: number | null;
+  roof: string | null;
+  surface: string | null;
+  stadium_id: string | null;
+  stadium: string | null;
+};
+
+export async function openGamesDb() {
+  return open({
+    filename: gamesDbPath,
+    driver: sqlite3.Database,
+  });
+}
+
+export async function getGamesBySeasonWeekOrdered(
+  season: number,
+  week: number,
+): Promise<GameRow[]> {
+  const db = await openGamesDb();
+  return db.all(
+    `
+    SELECT *
+    FROM games
+    WHERE season = ? AND week = ?
+    ORDER BY gameday ASC, gametime ASC, away_team ASC
+    `,
+    [season, week],
+  );
+}
+
+export async function getGamesBySeasonOrdered(
+  season: number,
+): Promise<GameRow[]> {
+  const db = await openGamesDb();
+  return db.all(
+    `
+    SELECT *
+    FROM games
+    WHERE season = ?
+    ORDER BY gameday ASC, gametime ASC, week ASC, away_team ASC
+    `,
+    [season],
+  );
+}
+
+export async function getGameById(gameId: string): Promise<GameRow | undefined> {
+  const db = await openGamesDb();
+  const row = await db.get(
+    `
+    SELECT *
+    FROM games
+    WHERE TRIM(CAST(game_id AS TEXT)) = TRIM(?)
+    LIMIT 1
+    `,
+    [String(gameId)],
+  );
+  return row as GameRow | undefined;
 }
 
 export async function getStatsByTeamAndSeason(team: string, season: number): Promise<PlayerGameRow[]> {

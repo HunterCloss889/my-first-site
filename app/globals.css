@@ -220,3 +220,9 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Ensure dropdown options are readable on system dropdown UI */
+.week-select option {
+  color: #111;
+  background-color: #fff;
+}
