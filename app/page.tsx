@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PlayerSearch from "./PlayerSearch";
 
 export default function Home() {
   return (
@@ -29,9 +30,8 @@ export default function Home() {
             Track player props across major North American leagues with a clean, fast interface.
           </p>
 
-          <div className="hero-cta-row">
-            <Link className="btn-primary" href="#leagues">Browse Leagues</Link>
-            <Link className="btn-ghost" href="/players-client">Quick: NFL Player Stats</Link>
+          <div style={{ marginTop: "1.5rem", marginBottom: "1rem" }}>
+            <PlayerSearch />
           </div>
         </section>
 

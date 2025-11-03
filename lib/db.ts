@@ -27,6 +27,7 @@ export type PlayerGameRow = {
 
 const dbPath = path.join(process.cwd(), "app", "nfl_player_stats.db");
 const gamesDbPath = path.join(process.cwd(), "app", "games.db");
+const logosDbPath = path.join(process.cwd(), "app", "nfl_team_logos.db");
 
 export async function openDb() {
   return open({
@@ -216,4 +217,123 @@ export async function getPlayerStatsAgainstOpponent(
     `,
     [playerId, opponentTeam]
   );
+}
+
+export async function searchPlayersByName(query: string): Promise<Array<{ player_id: string; player_display_name: string; position: string; recent_team: string }>> {
+  const db = await openDb();
+  return db.all(
+    `
+    SELECT DISTINCT player_id, player_display_name, position, recent_team
+    FROM player_game_stats
+    WHERE lower(player_display_name) LIKE lower(?)
+    ORDER BY player_display_name ASC
+    LIMIT 50
+    `,
+    [`%${query}%`]
+  );
+}
+
+export async function getPlayerGameLog(playerId: string): Promise<PlayerGameRow[]> {
+  const db = await openDb();
+  return db.all(
+    `
+    SELECT *
+    FROM player_game_stats
+    WHERE player_id = ?
+    ORDER BY season DESC, week ASC
+    `,
+    [playerId]
+  );
+}
+
+export async function openLogosDb() {
+  return open({
+    filename: logosDbPath,
+    driver: sqlite3.Database,
+  });
+}
+
+export async function getTeamLogo(teamAbbr: string): Promise<string | null> {
+  const db = await openLogosDb();
+  try {
+    // Try common column names for team abbreviation/name
+    const result = await db.get(
+      `
+      SELECT logo_url, logo, url, image_url, image
+      FROM teams
+      WHERE lower(team_abbr) = lower(?)
+         OR lower(abbreviation) = lower(?)
+         OR lower(team) = lower(?)
+         OR lower(name) = lower(?)
+      LIMIT 1
+      `,
+      [teamAbbr, teamAbbr, teamAbbr, teamAbbr]
+    );
+    if (!result) return null;
+    // Return the first non-null logo field
+    return result.logo_url || result.logo || result.url || result.image_url || result.image || null;
+  } catch (err) {
+    console.error("Error fetching team logo:", err);
+    return null;
+  }
+}
+
+export async function getAllTeamLogos(): Promise<Map<string, string>> {
+  const db = await openLogosDb();
+  const logos = new Map<string, string>();
+  try {
+    // Try to get all data from the first table (assuming it's the teams/logos table)
+    const tables = await db.all("SELECT name FROM sqlite_master WHERE type='table'");
+    if (tables.length === 0) {
+      console.log("No tables found in logos database");
+      return logos;
+    }
+    
+    const tableName = (tables[0] as any).name;
+    console.log(`Fetching logos from table: ${tableName}`);
+    const rows = await db.all(`SELECT * FROM ${tableName}`);
+    console.log(`Found ${rows.length} rows in logos table`);
+    
+    for (const row of rows as any[]) {
+      // Try to find team key (ID/abbreviation) and logo URL
+      let teamKey: string | null = null;
+      let logoUrl: string | null = null;
+      
+      // Look for team identifier - prioritize ID columns since user changed IDs to match abbreviations
+      for (const [key, value] of Object.entries(row)) {
+        const keyLower = key.toLowerCase();
+        const valueStr = value ? String(value).trim() : "";
+        
+        // Look for ID, team_abbr, abbreviation, or team columns
+        if (valueStr && (keyLower === 'id' || keyLower === 'team_id' || keyLower.includes('team_abbr') || keyLower.includes('abbreviation') || (keyLower.includes('team') && !keyLower.includes('logo')) || keyLower === 'name')) {
+          teamKey = valueStr;
+          break;
+        }
+      }
+      
+      // Look for logo/image URL
+      for (const [key, value] of Object.entries(row)) {
+        const keyLower = key.toLowerCase();
+        const valueStr = value ? String(value).trim() : "";
+        
+        if (valueStr && (keyLower.includes('logo') || keyLower.includes('image') || keyLower.includes('url'))) {
+          logoUrl = valueStr;
+          break;
+        }
+      }
+      
+      if (teamKey && logoUrl) {
+        const upperKey = teamKey.toUpperCase();
+        console.log(`Mapped logo: ${upperKey} -> ${logoUrl}`);
+        logos.set(upperKey, logoUrl);
+      } else {
+        console.log(`Skipping row - teamKey: ${teamKey}, logoUrl: ${logoUrl}`);
+      }
+    }
+    
+    console.log(`Total logos mapped: ${logos.size}`);
+  } catch (err) {
+    console.error("Error fetching all team logos:", err);
+  }
+  return logos;
 }
