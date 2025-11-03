@@ -36,6 +36,12 @@ body {
   padding: 2rem 1.25rem;
 }
 
+@media (max-width: 767px) {
+  .wrapper {
+    padding: 1rem 0.75rem;
+  }
+}
+
 /* NAVBAR */
 .navbar {
   position: sticky;
@@ -225,4 +231,38 @@ body {
 .week-select option {
   color: #111;
   background-color: #fff;
+}
+
+/* Mobile-friendly stats tables */
+.stats-table {
+  font-size: 0.75rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 0.4rem 0.35rem !important;
+  white-space: nowrap;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: rgba(148,163,184,0.08);
+  z-index: 2;
+}
+
+.stats-table tbody tr td:first-child {
+  background-color: var(--bg-card);
+}
+
+@media (min-width: 768px) {
+  .stats-table {
+    font-size: 0.85rem;
+  }
+  
+  .stats-table th,
+  .stats-table td {
+    padding: 0.5rem 0.5rem !important;
+  }
 }

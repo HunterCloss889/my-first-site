@@ -165,8 +165,9 @@ function SectionBlock({ title, season, awayTeam, homeTeam, rows, weeksSorted, se
         overflowX: "auto",
         overflowY: filteredPlayers.players.length > 6 ? "auto" : "visible",
         maxHeight: filteredPlayers.players.length > 6 ? "280px" : "none",
+        WebkitOverflowScrolling: "touch", // smooth scrolling on iOS
       }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900, fontSize: "0.85rem" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "max-content", fontSize: "0.85rem" }} className="stats-table">
           <thead>
             <tr>
               <th style={th}>Player</th>
@@ -397,8 +398,8 @@ function PlayerOpponentSearch({ season, awayTeam, homeTeam, rows }: PlayerOppone
           ) : playerStats.length === 0 ? (
             <div style={{ color: "var(--text-dim)" }}>No stats found against this opponent.</div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900, fontSize: "0.85rem" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "max-content", fontSize: "0.85rem" }} className="stats-table">
                 <thead>
                   <tr>
                     <th style={th}>Season</th>
