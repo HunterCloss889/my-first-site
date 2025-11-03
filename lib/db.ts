@@ -158,3 +158,44 @@ export async function getRecentStats(limit = 100): Promise<PlayerGameRow[]> {
     [limit]
   );
 }
+
+export async function getDefensiveRankings(season: number): Promise<
+  Array<{ team: string; passRank: number; passYpg: number; rushRank: number; rushYpg: number }>
+> {
+  const db = await openDb();
+  // total receiving/passing yards and rushing yards allowed by team via opponent_team
+  // games played = weeks with at least 1 opponent_row
+  const stats = await db.all(
+    `
+    SELECT
+      opponent_team AS team,
+      SUM(COALESCE(receiving_yards, 0)) AS pass_yds_allowed,
+      SUM(COALESCE(rushing_yards, 0)) AS rush_yds_allowed,
+      COUNT(DISTINCT week) AS games_played
+    FROM player_game_stats
+    WHERE season = ?
+      AND opponent_team IS NOT NULL
+    GROUP BY opponent_team
+    ORDER BY opponent_team ASC
+    `,
+    [season]
+  );
+  const withAvg = stats.map((s: any) => ({
+    team: s.team,
+    passYds: s.pass_yds_allowed || 0,
+    passYpg: (s.pass_yds_allowed || 0) / (s.games_played || 1),
+    rushYds: s.rush_yds_allowed || 0,
+    rushYpg: (s.rush_yds_allowed || 0) / (s.games_played || 1),
+  }));
+  // sort and rank
+  withAvg.sort((a, b) => a.passYpg - b.passYpg);
+  const withPassRank = withAvg.map((s, idx) => ({ ...s, passRank: idx + 1 }));
+  withPassRank.sort((a, b) => a.rushYpg - b.rushYpg);
+  return withPassRank.map((s, idx) => ({
+    team: s.team,
+    passRank: s.passRank,
+    passYpg: Number((s.passYpg || 0).toFixed(1)),
+    rushRank: idx + 1,
+    rushYpg: Number((s.rushYpg || 0).toFixed(1)),
+  }));
+}
