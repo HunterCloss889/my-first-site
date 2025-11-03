@@ -187,7 +187,7 @@ export async function getDefensiveRankings(season: number): Promise<
     rushYds: s.rush_yds_allowed || 0,
     rushYpg: (s.rush_yds_allowed || 0) / (s.games_played || 1),
   }));
-  // sort and rank
+  // sort and rank: ascending = lower yards = better defense = rank 1
   withAvg.sort((a, b) => a.passYpg - b.passYpg);
   const withPassRank = withAvg.map((s, idx) => ({ ...s, passRank: idx + 1 }));
   withPassRank.sort((a, b) => a.rushYpg - b.rushYpg);
@@ -198,4 +198,22 @@ export async function getDefensiveRankings(season: number): Promise<
     rushRank: idx + 1,
     rushYpg: Number((s.rushYpg || 0).toFixed(1)),
   }));
+}
+
+export async function getPlayerStatsAgainstOpponent(
+  playerId: string,
+  opponentTeam: string,
+  currentSeason: number
+): Promise<PlayerGameRow[]> {
+  const db = await openDb();
+  return db.all(
+    `
+    SELECT *
+    FROM player_game_stats
+    WHERE player_id = ?
+      AND lower(opponent_team) = lower(?)
+    ORDER BY season DESC, week DESC
+    `,
+    [playerId, opponentTeam]
+  );
 }
