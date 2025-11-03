@@ -137,6 +137,11 @@ export default function HomePage() {
 
   return (
     <main className="wrapper">
+      <div style={{ marginBottom: "1rem" }}>
+        <Link href="/" className="back-button">
+          ← Back to Home
+        </Link>
+      </div>
       <section className="hero-card" style={{ textAlign: "left" }}>
         <div className="hero-eyebrow">Schedule</div>
         <h1 className="hero-title">NFL Schedule</h1>

@@ -229,15 +229,8 @@ function formatNumber(n: number) {
 
 const th: React.CSSProperties = {
   textAlign: "left",
-  position: "sticky",
-  top: 0,
-  zIndex: 1,
   borderBottom: "1px solid rgba(148, 163, 184, 0.25)",
-  padding: "0.6rem 0.5rem",
-  whiteSpace: "nowrap",
-  background: "rgba(148,163,184,0.08)",
   color: "var(--text-primary)",
-  backdropFilter: "blur(6px)",
 };
 
 const td: React.CSSProperties = {

@@ -1,5 +1,6 @@
 import { getGameById, getStatsByTeamAndSeason, getDefensiveRankings, type PlayerGameRow } from "@/lib/db";
 import StatsClient from "./StatsClient";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,11 @@ export default async function GamePage({ params }: PageProps) {
   if (!game) {
     return (
       <main className="wrapper">
+        <div style={{ marginBottom: "1rem" }}>
+          <Link href="/players-client" className="back-button">
+            ← Back to Schedule
+          </Link>
+        </div>
         <section className="hero-card">
           <div className="hero-eyebrow">Game</div>
           <h1 className="hero-title">Game not found</h1>
@@ -49,6 +55,11 @@ export default async function GamePage({ params }: PageProps) {
 
   return (
     <main className="wrapper">
+      <div style={{ marginBottom: "1rem" }}>
+        <Link href="/players-client" className="back-button">
+          ← Back to Schedule
+        </Link>
+      </div>
       <section className="hero-card">
         <div className="hero-eyebrow">Game</div>
         <h1 className="hero-title" style={{ marginBottom: "0.25rem" }}>
