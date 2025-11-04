@@ -43,28 +43,13 @@ export default function HomePage() {
   const [seasonYear] = useState<number>(new Date().getFullYear());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
-  const [teamLogos, setTeamLogos] = useState<Record<string, string>>({});
 
   // Stats search removed
 
-  // Load team logos
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/team-logos");
-        const data = await res.json();
-        console.log("Team logos API response:", data);
-        if (res.ok && data.success) {
-          console.log("Setting team logos:", data.logos);
-          setTeamLogos(data.logos || {});
-        } else {
-          console.error("Failed to load team logos:", data.message);
-        }
-      } catch (err) {
-        console.error("Error loading team logos:", err);
-      }
-    })();
-  }, []);
+  // Helper function to get logo path from team abbreviation
+  const getTeamLogoPath = (teamAbbr: string): string => {
+    return `/team-logos/${teamAbbr.toLowerCase()}.png`;
+  };
 
   // Determine current week and populate available weeks for current season
   useEffect(() => {
@@ -268,35 +253,29 @@ export default function HomePage() {
                           <div style={{ display: "flex", justifyContent: "center", color: "var(--text-dim)", fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.25rem" }}>
                             <span>{formatTime12h(g.gametime)}</span>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", fontSize: "1rem", fontWeight: 600 }}>
-                            <div style={{ flex: 1, textAlign: "right", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
-                              {teamLogos[g.away_team.toUpperCase()] && (
-                                <img 
-                                  src={teamLogos[g.away_team.toUpperCase()]} 
-                                  alt={g.away_team}
-                                  style={{ width: "24px", height: "24px", objectFit: "contain" }}
-                                  onError={(e) => {
-                                    console.error(`Failed to load logo for ${g.away_team}:`, teamLogos[g.away_team.toUpperCase()]);
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              )}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", fontSize: "1rem", fontWeight: 600 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <img 
+                                src={getTeamLogoPath(g.away_team)} 
+                                alt={g.away_team}
+                                style={{ width: "24px", height: "24px", objectFit: "contain" }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
                               <span>{g.away_team}</span>
                             </div>
                             <div style={{ flexShrink: 0, width: 28, textAlign: "center" }}>@</div>
-                            <div style={{ flex: 1, textAlign: "left", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              {teamLogos[g.home_team.toUpperCase()] && (
-                                <img 
-                                  src={teamLogos[g.home_team.toUpperCase()]} 
-                                  alt={g.home_team}
-                                  style={{ width: "24px", height: "24px", objectFit: "contain" }}
-                                  onError={(e) => {
-                                    console.error(`Failed to load logo for ${g.home_team}:`, teamLogos[g.home_team.toUpperCase()]);
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              )}
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                               <span>{g.home_team}</span>
+                              <img 
+                                src={getTeamLogoPath(g.home_team)} 
+                                alt={g.home_team}
+                                style={{ width: "24px", height: "24px", objectFit: "contain" }}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
                             </div>
                           </div>
                         </Link>
