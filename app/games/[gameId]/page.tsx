@@ -1,6 +1,7 @@
 import { getGameById, getStatsByTeamAndSeason, getDefensiveRankings, type PlayerGameRow } from "@/lib/db";
 import StatsClient from "./StatsClient";
 import Link from "next/link";
+import TeamLogo from "./TeamLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,54 @@ export default async function GamePage({ params }: PageProps) {
   };
 
   return (
-    <main className="wrapper">
+    <main className="wrapper" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Blurred background logos */}
+      <div style={{
+        position: "fixed",
+        left: "-50px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: "600px",
+        height: "600px",
+        opacity: 0.3,
+        filter: "blur(12px)",
+        zIndex: 0,
+        pointerEvents: "none",
+      }}>
+        <img
+          src={`/team-logos/${away.toLowerCase()}.png`}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+      <div style={{
+        position: "fixed",
+        right: "-50px",
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: "600px",
+        height: "600px",
+        opacity: 0.3,
+        filter: "blur(12px)",
+        zIndex: 0,
+        pointerEvents: "none",
+      }}>
+        <img
+          src={`/team-logos/${home.toLowerCase()}.png`}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+      
+      <div style={{ position: "relative", zIndex: 1 }}>
       <div style={{ marginBottom: "1rem" }}>
         <Link href="/players-client" className="back-button">
           ← Back to Schedule
@@ -62,8 +110,16 @@ export default async function GamePage({ params }: PageProps) {
       </div>
       <section className="hero-card">
         <div className="hero-eyebrow">Game</div>
-        <h1 className="hero-title" style={{ marginBottom: "0.25rem" }}>
-          {away} @ {home}
+        <h1 className="hero-title" style={{ marginBottom: "0.25rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <TeamLogo teamAbbr={away} size={32} />
+            <span>{away}</span>
+          </div>
+          <span>@</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span>{home}</span>
+            <TeamLogo teamAbbr={home} size={32} />
+          </div>
         </h1>
         <div style={{ color: "var(--text-dim)", fontWeight: 600, marginBottom: "1rem" }}>
           {game.weekday || ""} {formatTime12h(game.gametime)} • Week {game.week}, {season}
@@ -112,6 +168,7 @@ export default async function GamePage({ params }: PageProps) {
         
         <StatsClient season={season} awayTeam={away} homeTeam={home} rows={rows} />
       </section>
+      </div>
     </main>
   );
 }
