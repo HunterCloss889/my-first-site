@@ -45,7 +45,7 @@ export default function Home() {
             <p className="feature-desc" style={{ marginBottom: "0.8rem" }}>
               Player game stats and trends to help evaluate props.
             </p>
-            <Link className="btn-primary" href="/players-client">Open NFL</Link>
+            <Link className="btn-primary" href="/nfl">Open NFL</Link>
           </article>
 
           <article className="feature-card">

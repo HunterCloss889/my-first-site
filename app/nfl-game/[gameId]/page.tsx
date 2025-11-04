@@ -17,7 +17,7 @@ export default async function GamePage({ params }: PageProps) {
     return (
       <main className="wrapper">
         <div style={{ marginBottom: "1rem" }}>
-          <Link href="/players-client" className="back-button">
+          <Link href="/nfl" className="back-button">
             ← Back to Schedule
           </Link>
         </div>
@@ -104,7 +104,7 @@ export default async function GamePage({ params }: PageProps) {
       
       <div style={{ position: "relative", zIndex: 1 }}>
       <div style={{ marginBottom: "1rem" }}>
-        <Link href="/players-client" className="back-button">
+        <Link href="/nfl" className="back-button">
           ← Back to Schedule
         </Link>
       </div>

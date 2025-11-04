@@ -1,5 +1,6 @@
 import { getPlayerGameLog } from "@/lib/db";
 import Link from "next/link";
+import PlayerSearch from "@/app/PlayerSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,10 @@ export default async function PlayerPage({ params }: PageProps) {
         </Link>
       </div>
       <section className="hero-card" style={{ textAlign: "left" }}>
+        <div style={{ marginBottom: "1.5rem" }}>
+          <PlayerSearch />
+        </div>
+        
         <div className="hero-eyebrow">Player</div>
         <h1 className="hero-title" style={{ marginBottom: "0.25rem" }}>
           {playerName}
@@ -106,6 +111,19 @@ export default async function PlayerPage({ params }: PageProps) {
             if (stat.receiving_tds != null) { sums.receiving_tds += stat.receiving_tds; counts.receiving_tds++; }
             if (stat.targets != null) { sums.targets += stat.targets; counts.targets++; }
           }
+          
+          const totals = {
+            passing_yards: sums.passing_yards,
+            passing_tds: sums.passing_tds,
+            interceptions: sums.interceptions,
+            rushing_yards: sums.rushing_yards,
+            rushing_tds: sums.rushing_tds,
+            carries: sums.carries,
+            receptions: sums.receptions,
+            receiving_yards: sums.receiving_yards,
+            receiving_tds: sums.receiving_tds,
+            targets: sums.targets,
+          };
           
           const averages = {
             passing_yards: counts.passing_yards > 0 ? sums.passing_yards / counts.passing_yards : 0,
@@ -166,6 +184,24 @@ export default async function PlayerPage({ params }: PageProps) {
                       backgroundColor: "rgba(148,163,184,0.08)", 
                       fontWeight: 600,
                       borderTop: "2px solid rgba(148, 163, 184, 0.3)"
+                    }}>
+                      <td style={td}>Total</td>
+                      <td style={td}>-</td>
+                      <td style={td}>-</td>
+                      <td style={td}>{formatNumber(totals.passing_yards)}</td>
+                      <td style={td}>{formatNumber(totals.passing_tds)}</td>
+                      <td style={td}>{formatNumber(totals.interceptions)}</td>
+                      <td style={td}>{formatNumber(totals.rushing_yards)}</td>
+                      <td style={td}>{formatNumber(totals.rushing_tds)}</td>
+                      <td style={td}>{formatNumber(totals.carries)}</td>
+                      <td style={td}>{formatNumber(totals.receptions)}</td>
+                      <td style={td}>{formatNumber(totals.receiving_yards)}</td>
+                      <td style={td}>{formatNumber(totals.receiving_tds)}</td>
+                      <td style={td}>{formatNumber(totals.targets)}</td>
+                    </tr>
+                    <tr style={{ 
+                      backgroundColor: "rgba(148,163,184,0.08)", 
+                      fontWeight: 600,
                     }}>
                       <td style={td}>Avg</td>
                       <td style={td}>-</td>

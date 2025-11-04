@@ -49,7 +49,7 @@ export default function PlayerSearch() {
   const handlePlayerClick = (playerId: string) => {
     setSearchQuery("");
     setShowDropdown(false);
-    router.push(`/players/${encodeURIComponent(playerId)}`);
+    router.push(`/player-stats/${encodeURIComponent(playerId)}`);
   };
 
   return (

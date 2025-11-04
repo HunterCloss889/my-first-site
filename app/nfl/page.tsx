@@ -239,7 +239,7 @@ export default function HomePage() {
                       {grp.items.map((g) => (
                         <Link
                           key={g.game_id}
-                          href={`/games/${encodeURIComponent(g.game_id)}`}
+                          href={`/nfl-game/${encodeURIComponent(g.game_id)}`}
           style={{
                             border: "1px solid rgba(148, 163, 184, 0.25)",
                             borderRadius: 8,
