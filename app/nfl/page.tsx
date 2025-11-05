@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -39,7 +39,7 @@ type GameRow = {
   stadium: string | null;
 };
 
-export default function HomePage() {
+function NFLScheduleContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [games, setGames] = useState<GameRow[]>([]);
@@ -381,6 +381,29 @@ export default function HomePage() {
       {/* Player stats table removed */}
     </main>
     </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <main className="wrapper">
+        <div style={{ marginBottom: "1rem" }}>
+          <Link href="/" className="back-button">
+            ← Back to Home
+          </Link>
+        </div>
+        <section className="hero-card" style={{ textAlign: "left" }}>
+          <div className="hero-eyebrow">Schedule</div>
+          <h1 className="hero-title">NFL Schedule</h1>
+          <p className="hero-desc" style={{ marginLeft: 0 }}>
+            Loading...
+          </p>
+        </section>
+      </main>
+    }>
+      <NFLScheduleContent />
+    </Suspense>
   );
 }
 
