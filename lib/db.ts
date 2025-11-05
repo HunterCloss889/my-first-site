@@ -27,6 +27,7 @@ export type PlayerGameRow = {
 
 const dbPath = path.join(process.cwd(), "app", "nfl_player_stats.db");
 const gamesDbPath = path.join(process.cwd(), "app", "games.db");
+const stadiumsDbPath = path.join(process.cwd(), "app", "stadiums_with_latlon.db");
 
 export async function openDb() {
   return open({
@@ -243,6 +244,64 @@ export async function getPlayerGameLog(playerId: string): Promise<PlayerGameRow[
     `,
     [playerId]
   );
+}
+
+export async function openStadiumsDb() {
+  return open({
+    filename: stadiumsDbPath,
+    driver: sqlite3.Database,
+  });
+}
+
+export async function getStadiumName(stadiumId: string | null): Promise<string | null> {
+  if (!stadiumId) return null;
+  const db = await openStadiumsDb();
+  const row = await db.get(
+    `
+    SELECT stadium
+    FROM stadiums
+    WHERE stadium_id = ?
+    LIMIT 1
+    `,
+    [stadiumId]
+  );
+  await db.close();
+  return row ? (row as { stadium: string }).stadium : null;
+}
+
+export async function getStadiumRoof(stadiumId: string | null): Promise<string | null> {
+  if (!stadiumId) return null;
+  const db = await openStadiumsDb();
+  const row = await db.get(
+    `
+    SELECT roof
+    FROM stadiums
+    WHERE stadium_id = ?
+    LIMIT 1
+    `,
+    [stadiumId]
+  );
+  await db.close();
+  return row ? (row as { roof: string }).roof : null;
+}
+
+export async function getStadiumCoordinates(stadiumId: string | null): Promise<{ latitude: number; longitude: number } | null> {
+  if (!stadiumId) return null;
+  const db = await openStadiumsDb();
+  const row = await db.get(
+    `
+    SELECT latitude, longitude
+    FROM stadiums
+    WHERE stadium_id = ?
+    LIMIT 1
+    `,
+    [stadiumId]
+  );
+  await db.close();
+  if (!row) return null;
+  const coords = row as { latitude: number; longitude: number };
+  if (coords.latitude == null || coords.longitude == null) return null;
+  return { latitude: coords.latitude, longitude: coords.longitude };
 }
 
 

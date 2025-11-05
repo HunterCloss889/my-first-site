@@ -68,6 +68,15 @@ body {
   gap: 0.5rem;
 }
 
+.brand img,
+.navbar img {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: relative;
+  z-index: 101;
+}
+
 .brand-badge {
   background-color: var(--accent);
   color: #0f172a;

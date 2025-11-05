@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PlayerSearch from "./PlayerSearch";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -8,7 +9,16 @@ export default function Home() {
       <header className="navbar">
         <div className="wrapper nav-inner">
           <div className="brand">
-            <span>props-tracker</span>
+            <Link href="/" style={{ display: "flex", alignItems: "center" }}>
+              <Image 
+                src="/logo_words.png" 
+                alt="Props Tracker" 
+                width={300} 
+                height={80}
+                style={{ height: "auto", width: "auto", maxHeight: "80px" }}
+                priority
+              />
+            </Link>
             <span className="brand-badge">beta</span>
           </div>
 

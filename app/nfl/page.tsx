@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useSearchParams, useRouter } from "next/navigation";
 
 // Removed player stats types; this page now focuses on schedule only
 
@@ -38,11 +40,15 @@ type GameRow = {
 };
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [games, setGames] = useState<GameRow[]>([]);
   const [gamesError, setGamesError] = useState("");
   const [seasonYear] = useState<number>(new Date().getFullYear());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
+  const isInitializing = useRef(true);
+  const isSettingFromUrl = useRef(false);
 
   // Stats search removed
 
@@ -50,6 +56,28 @@ export default function HomePage() {
   const getTeamLogoPath = (teamAbbr: string): string => {
     return `/team-logos/${teamAbbr.toLowerCase()}.png`;
   };
+
+  // Update URL when week changes manually (but not during initialization)
+  useEffect(() => {
+    // Skip URL update during initial load or when setting from URL
+    if (isInitializing.current || isSettingFromUrl.current) {
+      return;
+    }
+    
+    if (selectedWeek !== null) {
+      const urlWeek = searchParams.get("week");
+      const urlWeekNum = urlWeek ? Number(urlWeek) : null;
+      // Only update URL if it's different from current URL param
+      if (urlWeekNum !== selectedWeek) {
+        const params = new URLSearchParams();
+        params.set("week", String(selectedWeek));
+        router.replace(`/nfl?${params.toString()}`, { scroll: false });
+      }
+    } else if (searchParams.get("week")) {
+      // If selectedWeek is null but URL has week param, clear it
+      router.replace("/nfl", { scroll: false });
+    }
+  }, [selectedWeek, router, searchParams]);
 
   // Determine current week and populate available weeks for current season
   useEffect(() => {
@@ -68,6 +96,19 @@ export default function HomePage() {
         for (const g of all) if (typeof g.week === "number") wkSet.add(g.week);
         const weeks = Array.from(wkSet).sort((a, b) => a - b);
         setAvailableWeeks(weeks);
+
+        // Check URL parameter first (for back navigation from game page)
+        const urlWeek = searchParams.get("week");
+        if (urlWeek) {
+          const urlWeekNum = Number(urlWeek);
+          if (!Number.isNaN(urlWeekNum) && weeks.includes(urlWeekNum)) {
+            isSettingFromUrl.current = true;
+            setSelectedWeek(urlWeekNum);
+            isSettingFromUrl.current = false;
+            isInitializing.current = false;
+            return;
+          }
+        }
 
         // find current week: if any game on today => that week, else next earliest day with a game
         const now = new Date();
@@ -109,13 +150,15 @@ export default function HomePage() {
           currentWeek = bestWeek ?? (weeks.length ? weeks[weeks.length - 1] : null);
         }
 
+        isSettingFromUrl.current = false;
         setSelectedWeek(currentWeek);
+        isInitializing.current = false;
       } catch (err: any) {
         console.error("deriveCurrentWeek error", err);
         setGamesError(err?.message ?? "Failed to load games");
       }
     })();
-  }, [seasonYear]);
+  }, [seasonYear, searchParams]);
 
   // Load games for the selected week in the current season
   useEffect(() => {
@@ -141,105 +184,151 @@ export default function HomePage() {
   }, [seasonYear, selectedWeek]);
 
   return (
-    <main className="wrapper">
-      <div style={{ marginBottom: "1rem" }}>
-        <Link href="/" className="back-button">
-          ← Back to Home
-        </Link>
-      </div>
-      <section className="hero-card" style={{ textAlign: "left" }}>
-        <div className="hero-eyebrow">Schedule</div>
-        <h1 className="hero-title">NFL Schedule</h1>
-        <p className="hero-desc" style={{ marginLeft: 0 }}>
-          Browse current season games by week and click a game for details.
-        </p>
-      </section>
-
-      {/* Week 9, 2025 Games */}
-      <section style={{ marginTop: "var(--gap-section)" }}>
-        <div className="hero-eyebrow">Schedule</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-          <h2 className="hero-title" style={{ fontSize: "1.25rem", margin: 0 }}>
-            {seasonYear} • Week {selectedWeek ?? "-"}
-          </h2>
-          <div>
-            <label style={{ marginRight: 8, color: "var(--text-dim)" }}>Week</label>
-            <select
-              className="week-select"
-              value={selectedWeek ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedWeek(val ? Number(val) : null);
-              }}
-            style={{
-                padding: "0.45rem 0.6rem",
-              background: "rgba(148,163,184,0.08)",
-              color: "var(--text-primary)",
-                border: "1px solid rgba(148,163,184,0.25)",
-              borderRadius: 8,
-              }}
-            >
-              <option value="" disabled>
-                Select week
-              </option>
-              {availableWeeks.map((w) => (
-                <option key={w} value={w}>
-                  Week {w}
-                </option>
-              ))}
-            </select>
-          </div>
+    <>
+      {/* HEADER WITH LOGO */}
+      <header className="navbar" style={{ marginBottom: "1rem" }}>
+        <div className="wrapper nav-inner">
+          <Link href="/" style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 101 }}>
+            <Image 
+              src="/logo_no_words.png" 
+              alt="Props Tracker" 
+              width={40} 
+              height={40}
+              style={{ height: "40px", width: "auto", display: "block", opacity: 1 }}
+              priority
+            />
+          </Link>
         </div>
-        {gamesError ? (
-          <p style={{ color: "#fca5a5", marginTop: "0.25rem" }}>{gamesError}</p>
-        ) : games.length === 0 ? (
-          <p style={{ marginTop: "0.5rem", color: "var(--text-dim)" }}>No games found.</p>
-        ) : (
-          (() => {
-            const formatTime12h = (time: string | null) => {
-              if (!time) return "";
-              // Expecting HH:MM[:SS]
-              const [hhStr, mmStr] = time.split(":");
-              let hh = Number(hhStr);
-              const mm = mmStr ?? "00";
-              const ampm = hh >= 12 ? "PM" : "AM";
-              hh = hh % 12;
-              if (hh === 0) hh = 12;
-              return `${hh}:${mm} ${ampm}`;
-            };
+      </header>
+      <main className="wrapper">
+        <div style={{ marginBottom: "1rem" }}>
+          <Link href="/" className="back-button">
+            ← Back to Home
+          </Link>
+        </div>
+        <section className="hero-card" style={{ textAlign: "left" }}>
+          <div className="hero-eyebrow">Schedule</div>
+          <h1 className="hero-title">NFL Schedule</h1>
+          <p className="hero-desc" style={{ marginLeft: 0 }}>
+            Browse current season games by week and click a game for details.
+          </p>
+        </section>
 
-            const weekdayFromDate = (dateStr: string | null) => {
-              if (!dateStr) return "";
-              const d = new Date(dateStr);
-              if (isNaN(d.getTime())) return "";
-              return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()];
-            };
+        {/* Week 9, 2025 Games */}
+        <section style={{ marginTop: "var(--gap-section)" }}>
+          <div className="hero-eyebrow">Schedule</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <h2 className="hero-title" style={{ fontSize: "1.25rem", margin: 0 }}>
+              {seasonYear} • Week {selectedWeek ?? "-"}
+            </h2>
+            <div>
+              <label style={{ marginRight: 8, color: "var(--text-dim)" }}>Week</label>
+              <select
+                className="week-select"
+                value={selectedWeek ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedWeek(val ? Number(val) : null);
+                }}
+              style={{
+                  padding: "0.45rem 0.6rem",
+                background: "rgba(148,163,184,0.08)",
+                color: "var(--text-primary)",
+                  border: "1px solid rgba(148,163,184,0.25)",
+                borderRadius: 8,
+                }}
+              >
+                <option value="" disabled>
+                  Select week
+                </option>
+                {availableWeeks.map((w) => (
+                  <option key={w} value={w}>
+                    Week {w}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {gamesError ? (
+            <p style={{ color: "#fca5a5", marginTop: "0.25rem" }}>{gamesError}</p>
+          ) : games.length === 0 ? (
+            <p style={{ marginTop: "0.5rem", color: "var(--text-dim)" }}>No games found.</p>
+          ) : (
+            (() => {
+              const formatTime12h = (time: string | null) => {
+                if (!time) return "";
+                // Expecting HH:MM[:SS]
+                const [hhStr, mmStr] = time.split(":");
+                let hh = Number(hhStr);
+                const mm = mmStr ?? "00";
+                const ampm = hh >= 12 ? "PM" : "AM";
+                hh = hh % 12;
+                if (hh === 0) hh = 12;
+                return `${hh}:${mm} ${ampm}`;
+              };
 
-            type Group = { key: string; label: string; items: GameRow[] };
-            const groups: Group[] = [];
-            let currentKey = "__start";
-            let current: Group | null = null;
-            for (const g of games) {
-              const key = (g.weekday && g.weekday.trim()) || weekdayFromDate(g.gameday) || "";
-              const label = key;
-              if (!current || key !== currentKey) {
-                current = { key, label, items: [] };
-                groups.push(current);
-                currentKey = key;
+              const weekdayFromDate = (dateStr: string | null) => {
+                if (!dateStr) return "";
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return "";
+                return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()];
+              };
+
+              // Convert time string to seconds for proper numerical comparison
+              const timeToSeconds = (time: string | null): number => {
+                if (!time) return Number.POSITIVE_INFINITY;
+                const parts = time.split(":");
+                const hours = parseInt(parts[0] || "0", 10);
+                const minutes = parseInt(parts[1] || "0", 10);
+                const seconds = parseInt(parts[2] || "0", 10);
+                return hours * 3600 + minutes * 60 + seconds;
+              };
+
+              type Group = { key: string; label: string; items: GameRow[] };
+              const groups: Group[] = [];
+              let currentKey = "__start";
+              let current: Group | null = null;
+              for (const g of games) {
+                const key = (g.weekday && g.weekday.trim()) || weekdayFromDate(g.gameday) || "";
+                const label = key;
+                if (!current || key !== currentKey) {
+                  current = { key, label, items: [] };
+                  groups.push(current);
+                  currentKey = key;
+                }
+                current.items.push(g);
               }
-              current.items.push(g);
-            }
+              
+              // Sort games within each group by gameday and gametime
+              for (const grp of groups) {
+                grp.items.sort((a, b) => {
+                  // First sort by gameday
+                  if (a.gameday !== b.gameday) {
+                    if (!a.gameday) return 1;
+                    if (!b.gameday) return -1;
+                    return a.gameday.localeCompare(b.gameday);
+                  }
+                  // Then sort by gametime - convert to seconds for proper numerical comparison
+                  const timeA = timeToSeconds(a.gametime);
+                  const timeB = timeToSeconds(b.gametime);
+                  if (timeA !== timeB) {
+                    return timeA - timeB;
+                  }
+                  // Finally by away_team for consistency
+                  return a.away_team.localeCompare(b.away_team);
+                });
+              }
 
-            return (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginTop: "0.75rem" }}>
-                {groups.map((grp) => (
-                  <div key={grp.key}>
-                    <div style={{ color: "var(--text-dim)", fontWeight: 600, marginBottom: "0.5rem" }}>{grp.label}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {grp.items.map((g) => (
-                        <Link
-                          key={g.game_id}
-                          href={`/nfl-game/${encodeURIComponent(g.game_id)}`}
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", marginTop: "0.75rem" }}>
+                  {groups.map((grp) => (
+                    <div key={grp.key}>
+                      <div style={{ color: "var(--text-dim)", fontWeight: 600, marginBottom: "0.5rem" }}>{grp.label}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        {grp.items.map((g) => (
+                          <Link
+                            key={g.game_id}
+                            href={`/nfl-game/${encodeURIComponent(g.game_id)}${selectedWeek !== null ? `?week=${selectedWeek}` : ""}`}
           style={{
                             border: "1px solid rgba(148, 163, 184, 0.25)",
                             borderRadius: 8,
@@ -291,6 +380,7 @@ export default function HomePage() {
 
       {/* Player stats table removed */}
     </main>
+    </>
   );
 }
 

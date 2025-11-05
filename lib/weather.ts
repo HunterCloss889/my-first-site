@@ -1,0 +1,259 @@
+// lib/weather.ts
+
+export type WeatherHour = {
+  time: string;
+  temperature_c: number;
+  apparent_temperature_c: number;
+  precipitation_mm: number;
+  precipitation_probability: number;
+  snowfall_cm: number;
+  wind_kmh: number;
+};
+
+const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+const OPEN_METEO_HISTORICAL_URL = "https://archive-api.open-meteo.com/v1/archive";
+
+// Basic timezone mapping for NFL teams (simplified - covers most common cases)
+// For a more complete solution, you'd want to map each stadium to its exact timezone
+const TEAM_TIMEZONE_MAP: Record<string, string> = {
+  // Eastern Time
+  "NE": "America/New_York", "NYJ": "America/New_York", "NYG": "America/New_York",
+  "BUF": "America/New_York", "MIA": "America/New_York", "BAL": "America/New_York",
+  "CIN": "America/New_York", "CLE": "America/New_York", "PIT": "America/New_York",
+  "JAX": "America/New_York", "TEN": "America/New_York", "IND": "America/New_York",
+  "HOU": "America/Chicago", "ATL": "America/New_York", "CAR": "America/New_York",
+  "TB": "America/New_York", "NO": "America/Chicago", "WAS": "America/New_York",
+  "PHI": "America/New_York", "DAL": "America/Chicago",
+  
+  // Central Time
+  "CHI": "America/Chicago", "GB": "America/Chicago", "MIN": "America/Chicago",
+  "DET": "America/New_York", "KC": "America/Chicago",
+  "LV": "America/Los_Angeles", "LAC": "America/Los_Angeles", "LAR": "America/Los_Angeles",
+  
+  // Mountain Time
+  "ARI": "America/Phoenix", // Arizona doesn't observe DST
+  "DEN": "America/Denver",
+  
+  // Pacific Time
+  "SF": "America/Los_Angeles", "SEA": "America/Los_Angeles",
+};
+
+// Default timezone fallback
+const DEFAULT_TIMEZONE = "America/New_York";
+
+/**
+ * Get timezone for a team (simplified - uses team abbreviation)
+ */
+function getTimezoneForTeam(team: string): string {
+  return TEAM_TIMEZONE_MAP[team.toUpperCase()] || DEFAULT_TIMEZONE;
+}
+
+/**
+ * Round down game time to the nearest hour
+ * e.g., "13:00:00" -> 13, "16:25:00" -> 16
+ */
+function roundDownToHour(timeStr: string | null): number {
+  if (!timeStr) return 0;
+  const [hours] = timeStr.split(":");
+  return parseInt(hours, 10);
+}
+
+/**
+ * Format date and hour into ISO string for OpenMeteo
+ */
+function formatDateTimeForWeather(dateStr: string | null, hour: number): string {
+  if (!dateStr) {
+    throw new Error("Date is required");
+  }
+  // Format: "2025-11-09T13:00"
+  return `${dateStr}T${hour.toString().padStart(2, "0")}:00`;
+}
+
+/**
+ * Fetch 4 hours of weather data from OpenMeteo
+ */
+export async function getFourHoursWeather(
+  latitude: number,
+  longitude: number,
+  gameDate: string | null,
+  gameTime: string | null,
+  timezone: string
+): Promise<WeatherHour[]> {
+  if (!gameDate || !gameTime) {
+    return [];
+  }
+
+  const startHour = roundDownToHour(gameTime);
+  const startDateTime = formatDateTimeForWeather(gameDate, startHour);
+
+  // Calculate end date (might be same day or next day)
+  // We need to handle this carefully to avoid timezone issues
+  // Since we're adding 4 hours, we might cross midnight
+  const endHour = startHour + 4;
+  let endDateStr = gameDate;
+  
+  // If adding 4 hours crosses midnight (24:00), we need the next day
+  if (endHour >= 24) {
+    const gameDateObj = new Date(gameDate + "T00:00:00");
+    gameDateObj.setDate(gameDateObj.getDate() + 1);
+    endDateStr = gameDateObj.toISOString().split("T")[0];
+  }
+  
+  const startDateStr = gameDate;
+
+  // Determine if we need historical data (past dates) or forecast (future dates)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const gameDateObj = new Date(gameDate + "T00:00:00");
+  gameDateObj.setHours(0, 0, 0, 0);
+  const isHistorical = gameDateObj < today;
+
+  const baseUrl = isHistorical ? OPEN_METEO_HISTORICAL_URL : OPEN_METEO_FORECAST_URL;
+
+  const params = new URLSearchParams({
+    latitude: latitude.toString(),
+    longitude: longitude.toString(),
+    hourly: "temperature_2m,apparent_temperature,precipitation,precipitation_probability,wind_speed_10m,snowfall",
+    timezone: timezone,
+    windspeed_unit: "kmh",
+    precipitation_unit: "mm",
+    snowfall_unit: "cm",
+    start_date: startDateStr,
+    end_date: endDateStr,
+  });
+
+  try {
+    const response = await fetch(`${baseUrl}?${params.toString()}`);
+    if (!response.ok) {
+      console.error(`OpenMeteo API error: ${response.status} for ${gameDate}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const hourly = data.hourly;
+
+    if (!hourly || !hourly.time) {
+      return [];
+    }
+
+    // Find the index of the start hour
+    // The API returns times in the timezone we specified, format: "2025-11-09T13:00" or "2025-11-09T13:00:00"
+    const startHourStr = startHour.toString().padStart(2, "0");
+    const times = hourly.time as string[];
+    
+    // Look for the time that matches our start hour
+    // We match by checking if the time string contains the date and hour
+    // The API returns times in the specified timezone, so we need to match exactly
+    let startIndex = -1;
+    
+    // First try exact match with the game date
+    startIndex = times.findIndex((t) => {
+      // Extract date and hour from the time string
+      const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);
+      if (!match) return false;
+      const [, date, hour] = match;
+      return date === gameDate && hour === startHourStr;
+    });
+
+    // If exact match not found, try to find the first hour >= start hour on the same date
+    if (startIndex === -1) {
+      startIndex = times.findIndex((t) => {
+        const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);
+        if (!match) return false;
+        const [, date, hour] = match;
+        if (date !== gameDate) return false;
+        return parseInt(hour, 10) >= startHour;
+      });
+    }
+
+    // If still not found, the date might have shifted due to timezone
+    // Try searching in the previous day (in case date shifted backward)
+    if (startIndex === -1) {
+      const prevDate = new Date(gameDate + "T00:00:00");
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split("T")[0];
+      
+      startIndex = times.findIndex((t) => {
+        const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);
+        if (!match) return false;
+        const [, date, hour] = match;
+        return date === prevDateStr && parseInt(hour, 10) >= startHour;
+      });
+    }
+
+    // If still not found, try next day (in case date shifted forward)
+    if (startIndex === -1) {
+      const nextDate = new Date(gameDate + "T00:00:00");
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = nextDate.toISOString().split("T")[0];
+      
+      startIndex = times.findIndex((t) => {
+        const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);
+        if (!match) return false;
+        const [, date, hour] = match;
+        return date === nextDateStr && parseInt(hour, 10) >= startHour;
+      });
+    }
+
+    // Last resort: find any time that matches the hour (ignore date)
+    if (startIndex === -1) {
+      startIndex = times.findIndex((t) => {
+        const match = t.match(/T(\d{2})/);
+        if (!match) return false;
+        const hour = parseInt(match[1], 10);
+        return hour === startHour || hour === startHour + 1;
+      });
+    }
+
+    if (startIndex === -1) {
+      console.error(`Could not find weather data for ${gameDate} at hour ${startHour}. Available times:`, times.slice(0, 10));
+      return [];
+    }
+
+    // Get 4 hours of data
+    const weatherHours: WeatherHour[] = [];
+    const temperatures = hourly.temperature_2m || [];
+    const apparentTemperatures = hourly.apparent_temperature || [];
+    const precipitations = hourly.precipitation || [];
+    const precipitationProbabilities = hourly.precipitation_probability || [];
+    const winds = hourly.wind_speed_10m || [];
+    const snowfalls = hourly.snowfall || [];
+
+    for (let i = 0; i < 4 && startIndex + i < times.length; i++) {
+      const idx = startIndex + i;
+      weatherHours.push({
+        time: times[idx],
+        temperature_c: temperatures[idx] ?? 0,
+        apparent_temperature_c: apparentTemperatures[idx] ?? temperatures[idx] ?? 0,
+        precipitation_mm: precipitations[idx] ?? 0,
+        precipitation_probability: precipitationProbabilities[idx] ?? 0,
+        snowfall_cm: snowfalls[idx] ?? 0,
+        wind_kmh: winds[idx] ?? 0,
+      });
+    }
+
+    return weatherHours;
+  } catch (error) {
+    console.error("Error fetching weather:", error);
+    return [];
+  }
+}
+
+/**
+ * Get weather for a game using stadium coordinates and game time
+ */
+export async function getGameWeather(
+  latitude: number | null,
+  longitude: number | null,
+  gameDate: string | null,
+  gameTime: string | null,
+  homeTeam: string
+): Promise<WeatherHour[]> {
+  if (!latitude || !longitude || !gameDate || !gameTime) {
+    return [];
+  }
+
+  const timezone = getTimezoneForTeam(homeTeam);
+  return getFourHoursWeather(latitude, longitude, gameDate, gameTime, timezone);
+}
+
