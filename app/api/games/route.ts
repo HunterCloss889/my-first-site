@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGamesBySeasonWeekOrdered, getGamesBySeasonOrdered } from "@/lib/db";
+import { getCurrentYearInToronto } from "@/lib/timezone";
 
 export async function GET(request: Request) {
   try {
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
     const seasonRaw = searchParams.get("season");
     const weekRaw = searchParams.get("week");
 
-    const season = seasonRaw ? Number(seasonRaw.trim()) : new Date().getFullYear();
+    const season = seasonRaw ? Number(seasonRaw.trim()) : getCurrentYearInToronto();
     const week = weekRaw ? Number(weekRaw.trim()) : NaN;
 
     if (Number.isNaN(season)) {

@@ -1,4 +1,5 @@
 // lib/weather.ts
+import { isBeforeTodayInToronto, addDaysToDate } from "./timezone";
 
 export type WeatherHour = {
   time: string;
@@ -12,41 +13,6 @@ export type WeatherHour = {
 
 const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_HISTORICAL_URL = "https://archive-api.open-meteo.com/v1/archive";
-
-// Basic timezone mapping for NFL teams (simplified - covers most common cases)
-// For a more complete solution, you'd want to map each stadium to its exact timezone
-const TEAM_TIMEZONE_MAP: Record<string, string> = {
-  // Eastern Time
-  "NE": "America/New_York", "NYJ": "America/New_York", "NYG": "America/New_York",
-  "BUF": "America/New_York", "MIA": "America/New_York", "BAL": "America/New_York",
-  "CIN": "America/New_York", "CLE": "America/New_York", "PIT": "America/New_York",
-  "JAX": "America/New_York", "TEN": "America/New_York", "IND": "America/New_York",
-  "HOU": "America/Chicago", "ATL": "America/New_York", "CAR": "America/New_York",
-  "TB": "America/New_York", "NO": "America/Chicago", "WAS": "America/New_York",
-  "PHI": "America/New_York", "DAL": "America/Chicago",
-  
-  // Central Time
-  "CHI": "America/Chicago", "GB": "America/Chicago", "MIN": "America/Chicago",
-  "DET": "America/New_York", "KC": "America/Chicago",
-  "LV": "America/Los_Angeles", "LAC": "America/Los_Angeles", "LAR": "America/Los_Angeles",
-  
-  // Mountain Time
-  "ARI": "America/Phoenix", // Arizona doesn't observe DST
-  "DEN": "America/Denver",
-  
-  // Pacific Time
-  "SF": "America/Los_Angeles", "SEA": "America/Los_Angeles",
-};
-
-// Default timezone fallback
-const DEFAULT_TIMEZONE = "America/New_York";
-
-/**
- * Get timezone for a team (simplified - uses team abbreviation)
- */
-function getTimezoneForTeam(team: string): string {
-  return TEAM_TIMEZONE_MAP[team.toUpperCase()] || DEFAULT_TIMEZONE;
-}
 
 /**
  * Round down game time to the nearest hour
@@ -87,26 +53,21 @@ export async function getFourHoursWeather(
   const startDateTime = formatDateTimeForWeather(gameDate, startHour);
 
   // Calculate end date (might be same day or next day)
-  // We need to handle this carefully to avoid timezone issues
   // Since we're adding 4 hours, we might cross midnight
+  // Use timezone-aware date arithmetic
   const endHour = startHour + 4;
   let endDateStr = gameDate;
   
   // If adding 4 hours crosses midnight (24:00), we need the next day
   if (endHour >= 24) {
-    const gameDateObj = new Date(gameDate + "T00:00:00");
-    gameDateObj.setDate(gameDateObj.getDate() + 1);
-    endDateStr = gameDateObj.toISOString().split("T")[0];
+    endDateStr = addDaysToDate(gameDate, 1);
   }
   
   const startDateStr = gameDate;
 
   // Determine if we need historical data (past dates) or forecast (future dates)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const gameDateObj = new Date(gameDate + "T00:00:00");
-  gameDateObj.setHours(0, 0, 0, 0);
-  const isHistorical = gameDateObj < today;
+  // Compare dates in America/Toronto timezone context
+  const isHistorical = isBeforeTodayInToronto(gameDate);
 
   const baseUrl = isHistorical ? OPEN_METEO_HISTORICAL_URL : OPEN_METEO_FORECAST_URL;
 
@@ -169,9 +130,7 @@ export async function getFourHoursWeather(
     // If still not found, the date might have shifted due to timezone
     // Try searching in the previous day (in case date shifted backward)
     if (startIndex === -1) {
-      const prevDate = new Date(gameDate + "T00:00:00");
-      prevDate.setDate(prevDate.getDate() - 1);
-      const prevDateStr = prevDate.toISOString().split("T")[0];
+      const prevDateStr = addDaysToDate(gameDate, -1);
       
       startIndex = times.findIndex((t) => {
         const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);
@@ -183,9 +142,7 @@ export async function getFourHoursWeather(
 
     // If still not found, try next day (in case date shifted forward)
     if (startIndex === -1) {
-      const nextDate = new Date(gameDate + "T00:00:00");
-      nextDate.setDate(nextDate.getDate() + 1);
-      const nextDateStr = nextDate.toISOString().split("T")[0];
+      const nextDateStr = addDaysToDate(gameDate, 1);
       
       startIndex = times.findIndex((t) => {
         const match = t.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})/);

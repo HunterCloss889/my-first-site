@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getCurrentYearInToronto, getTodayInToronto, getNowTimestampInToronto, getTorontoTimestamp, isTodayInToronto } from "@/lib/timezone";
 
 // Removed player stats types; this page now focuses on schedule only
 
@@ -44,7 +45,7 @@ function NFLScheduleContent() {
   const searchParams = useSearchParams();
   const [games, setGames] = useState<GameRow[]>([]);
   const [gamesError, setGamesError] = useState("");
-  const [seasonYear] = useState<number>(new Date().getFullYear());
+  const [seasonYear] = useState<number>(getCurrentYearInToronto());
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
   const isInitializing = useRef(true);
@@ -111,38 +112,33 @@ function NFLScheduleContent() {
         }
 
         // find current week: if any game on today => that week, else next earliest day with a game
-        const now = new Date();
-        const todayY = now.getUTCFullYear();
-        const todayM = now.getUTCMonth();
-        const todayD = now.getUTCDate();
-        const todayStart = Date.UTC(todayY, todayM, todayD, 0, 0, 0);
-        const todayEnd = Date.UTC(todayY, todayM, todayD, 23, 59, 59);
+        // All dates/times are in America/Toronto timezone
+        const todayInToronto = getTodayInToronto();
+        const nowTimestamp = getNowTimestampInToronto();
 
-        const toEpoch = (g: GameRow) => {
+        // Helper to get timestamp for a game (for comparison)
+        const getGameTimestamp = (g: GameRow): number => {
           if (!g.gameday) return Number.POSITIVE_INFINITY;
-          // Combine gameday + gametime; if no gametime, assume noon UTC
-          const [yy, mm, dd] = g.gameday.split("-").map(Number);
-          const [h, m, s] = (g.gametime || "12:00:00").split(":").map((x) => Number(x));
-          return Date.UTC(yy, (mm || 1) - 1, dd || 1, h || 0, m || 0, s || 0);
+          const timeStr = g.gametime || "12:00:00";
+          return getTorontoTimestamp(g.gameday, timeStr);
         };
 
         let currentWeek: number | null = null;
         // 1) Any game today?
         for (const g of all) {
-          const t = toEpoch(g);
-          if (t >= todayStart && t <= todayEnd) {
+          if (g.gameday && isTodayInToronto(g.gameday)) {
             currentWeek = g.week;
             break;
           }
         }
-        // 2) Otherwise, next earliest game >= now
+        // 2) Otherwise, next earliest game >= now (in Toronto timezone)
         if (currentWeek === null) {
-          let bestT = Number.POSITIVE_INFINITY;
+          let bestTimestamp = Number.POSITIVE_INFINITY;
           let bestWeek: number | null = null;
           for (const g of all) {
-            const t = toEpoch(g);
-            if (t >= now.getTime() && t < bestT) {
-              bestT = t;
+            const gameTimestamp = getGameTimestamp(g);
+            if (gameTimestamp >= nowTimestamp && gameTimestamp < bestTimestamp) {
+              bestTimestamp = gameTimestamp;
               bestWeek = g.week;
             }
           }
@@ -269,9 +265,11 @@ function NFLScheduleContent() {
 
               const weekdayFromDate = (dateStr: string | null) => {
                 if (!dateStr) return "";
-                const d = new Date(dateStr);
+                // Parse date and get weekday - dates are in America/Toronto timezone
+                const [year, month, day] = dateStr.split("-").map(Number);
+                const d = new Date(year, month - 1, day);
                 if (isNaN(d.getTime())) return "";
-                return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()];
+                return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getDay()];
               };
 
               // Convert time string to seconds for proper numerical comparison
