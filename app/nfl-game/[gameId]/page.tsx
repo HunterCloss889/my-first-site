@@ -96,6 +96,16 @@ export default async function GamePage({ params, searchParams }: PageProps) {
 
   const formatWeatherTime = (timeStr: string) => {
     // Format: "2025-11-09T13:00" or "2025-11-09T13:00:00"
+    // Extract hour directly from the string since API returns times in America/Toronto timezone
+    const match = timeStr.match(/T(\d{2}):/);
+    if (match) {
+      const hours = parseInt(match[1], 10);
+      const ampm = hours >= 12 ? "pm" : "am";
+      let displayHours = hours % 12;
+      if (displayHours === 0) displayHours = 12;
+      return `${displayHours}${ampm}`;
+    }
+    // Fallback to original method if format doesn't match
     const date = new Date(timeStr);
     let hours = date.getHours();
     const ampm = hours >= 12 ? "pm" : "am";
@@ -113,9 +123,9 @@ export default async function GamePage({ params, searchParams }: PageProps) {
   const formatRoofType = (roof: string | null): string | null => {
     if (!roof) return null;
     const roofLower = roof.toLowerCase();
-    if (roofLower === "outdoors") return "open roof";
-    if (roofLower === "closed") return "closed roof";
-    return roof; // dome and others stay the same
+    if (roofLower === "outdoors") return "OPEN ROOF";
+    if (roofLower === "closed") return "CLOSED ROOF";
+    return roof.toUpperCase(); // dome and others in all caps
   };
 
   return (

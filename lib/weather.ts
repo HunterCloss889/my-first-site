@@ -241,6 +241,7 @@ export async function getFourHoursWeather(
 
 /**
  * Get weather for a game using stadium coordinates and game time
+ * Note: Game times in the database are stored in America/Toronto timezone
  */
 export async function getGameWeather(
   latitude: number | null,
@@ -253,7 +254,8 @@ export async function getGameWeather(
     return [];
   }
 
-  const timezone = getTimezoneForTeam(homeTeam);
+  // Always use America/Toronto timezone since game times in the database are stored in this timezone
+  const timezone = "America/Toronto";
   return getFourHoursWeather(latitude, longitude, gameDate, gameTime, timezone);
 }
 
